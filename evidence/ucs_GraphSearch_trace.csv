@@ -1,0 +1,5 @@
+iteration,expanded_state,parent,action,generated_successors,frontier_before,frontier_after,explored,g,h,f
+1,A,START,None,"[('G', '0:A->G', 10.0), ('B', '1:A->B', 1.0)]",['A'],"['B', 'G']",['A'],0,0,0
+2,B,A,1:A->B,"[('C', '0:B->C', 1.0)]","['B', 'G']","['C', 'G']","['A', 'B']",1.0,0,1.0
+3,C,B,0:B->C,"[('G', '0:C->G', 1.0)]","['C', 'G']","['G', 'G']","['A', 'B', 'C']",2.0,0,2.0
+4,G,C,0:C->G,[],"['G', 'G']",['G'],"['A', 'B', 'C']",3.0,0,3.0
