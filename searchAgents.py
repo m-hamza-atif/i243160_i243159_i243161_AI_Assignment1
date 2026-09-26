@@ -32,6 +32,7 @@ import util
 import time
 import search
 import pacman
+from collections import deque
 
 class GoWestAgent(Agent):
     "An agent that goes West until it can't."
@@ -286,14 +287,19 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # State = (pacman's current position, tuple of booleans marking which
+        # of the 4 corners have already been visited). Initially no corners
+        # have been visited yet.
+        startState = (self.startingPosition, (False, False, False, False))
+        return startState
 
     def isGoalState(self, state: Any):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        _, visited = state
+        return all(visited)
 
     def getSuccessors(self, state: Any):
         """
@@ -307,6 +313,7 @@ class CornersProblem(search.SearchProblem):
         """
 
         successors = []
+        currentPosition, visited = state
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
             # Add a successor state to the successor list if the action is legal
             # Here's a code snippet for figuring out whether a new position hits a wall:
@@ -316,6 +323,28 @@ class CornersProblem(search.SearchProblem):
             #   hitsWall = self.walls[nextx][nexty]
 
             "*** YOUR CODE HERE ***"
+            x, y = currentPosition
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            hitsWall = self.walls[nextx][nexty]
+
+            if not hitsWall:
+                nextPosition = (nextx, nexty)
+                # Update the visited-corners tuple if this successor happens
+                # to land exactly on one of the four corners.
+                if nextPosition in self.corners:
+                    cornerIndex = self.corners.index(nextPosition)
+                    if not visited[cornerIndex]:
+                        nextVisited = list(visited)
+                        nextVisited[cornerIndex] = True
+                        nextVisited = tuple(nextVisited)
+                    else:
+                        nextVisited = visited
+                else:
+                    nextVisited = visited
+
+                nextState = (nextPosition, nextVisited)
+                successors.append((nextState, action, 1))
 
         self._expanded += 1 # DO NOT CHANGE
         return successors
@@ -351,7 +380,32 @@ def cornersHeuristic(state: Any, problem: CornersProblem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+    position, visited = state
+
+    # Only the corners that have not been visited yet still need to be reached.
+    unvisited = [corner for corner, isVisited in zip(corners, visited) if not isVisited]
+    if not unvisited:
+        return 0
+
+    # Nearest-neighbour chain: repeatedly jump (in Manhattan distance) to the
+    # closest remaining unvisited corner, and sum up those hops. Manhattan
+    # distance ignores walls, so each hop is never longer than the true maze
+    # distance -> the sum is a lower bound on the true remaining cost, which
+    # keeps the heuristic admissible. Because the estimate only ever drops by
+    # at most the true step cost of one move as Pacman advances, it is also
+    # consistent.
+    total = 0
+    currentPosition = position
+    remainingCorners = list(unvisited)
+    while remainingCorners:
+        distancesToRemaining = [(util.manhattanDistance(currentPosition, corner), corner)
+                                 for corner in remainingCorners]
+        nearestDistance, nearestCorner = min(distancesToRemaining)
+        total += nearestDistance
+        currentPosition = nearestCorner
+        remainingCorners.remove(nearestCorner)
+
+    return total
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -445,7 +499,94 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    return 0
+    foodList = foodGrid.asList()
+    if not foodList:
+        return 0
+
+    walls = problem.walls
+
+    def bfsDistances(source, targets):
+        """
+        Single-source BFS over the maze grid (real, wall-aware distance).
+        Returns a dict mapping each reached point in `targets` to its
+        shortest-path distance from `source`. Stops early once every target
+        has been found.
+        """
+        remainingTargets = set(targets)
+        distances = {}
+        if not remainingTargets:
+            return distances
+        visited = {source}
+        queue = deque([(source, 0)])
+        while queue and remainingTargets:
+            (x, y), dist = queue.popleft()
+            if (x, y) in remainingTargets:
+                distances[(x, y)] = dist
+                remainingTargets.discard((x, y))
+                if not remainingTargets:
+                    break
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if not walls[nx][ny] and (nx, ny) not in visited:
+                    visited.add((nx, ny))
+                    queue.append(((nx, ny), dist + 1))
+        return distances
+
+    # Real (wall-aware) distance from Pacman to every remaining food dot.
+    distancesFromPacman = bfsDistances(position, foodList)
+    nearestFoodDistance = min(distancesFromPacman.values())
+
+    if len(foodList) == 1:
+        return nearestFoodDistance
+
+    # Cache true maze distances between pairs of food dots: food positions
+    # never move, so a pair's distance computed on one call is valid for
+    # every later call, across the whole search.
+    pairCache = problem.heuristicInfo.setdefault('foodPairDistances', {})
+
+    edges = []
+    for i in range(len(foodList)):
+        for j in range(i + 1, len(foodList)):
+            a, b = foodList[i], foodList[j]
+            key = (a, b) if a <= b else (b, a)
+            if key not in pairCache:
+                pairCache[key] = bfsDistances(a, [b])[b]
+            edges.append((pairCache[key], a, b))
+    edges.sort()
+
+    # Minimum Spanning Tree (Kruskal's algorithm) over the remaining food
+    # dots, using real maze distances as edge weights.
+    parent = {food: food for food in foodList}
+
+    def find(node):
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+
+    def union(a, b):
+        rootA, rootB = find(a), find(b)
+        if rootA == rootB:
+            return False
+        parent[rootA] = rootB
+        return True
+
+    mstWeight = 0
+    for weight, a, b in edges:
+        if union(a, b):
+            mstWeight += weight
+
+    # Admissibility/consistency argument: any path that eats all remaining
+    # food must first reach *some* food dot (cost >= nearestFoodDistance,
+    # the true shortest distance to the closest one) and then, once among
+    # the food, must connect all of them together -- a Hamiltonian path
+    # over the dots costs at least as much as a Minimum Spanning Tree over
+    # the same dots (an MST is the cheapest possible connected structure).
+    # So nearestFoodDistance + MST weight never overestimates the true
+    # remaining cost, keeping the heuristic admissible; since both terms
+    # are true maze distances, taking one real step changes this bound by
+    # at most that step's true cost, which keeps it consistent as well.
+    return nearestFoodDistance + mstWeight
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
