@@ -104,7 +104,7 @@ class CSVTraceLogger:
 
     def log_step(self, expanded_state, parent, action, successors,
                  frontier_before_obj, frontier_after_obj, explored_set,
-                 g=0, h=0, f=0):
+                 g = 0, h = 0, f = 0):
         self.iteration += 1
         
         # Format successors as [(next_state, action, cost), ...]
@@ -134,12 +134,12 @@ class CSVTraceLogger:
     def write_to_csv(self):
         """Flushes buffered traces into the evidence/ directory."""
         evidence_dir = "evidence"
-        os.makedirs(evidence_dir, exist_ok=True)
+        os.makedirs(evidence_dir, exist_ok = True)
         filename = f"{evidence_dir}/{self.algorithm_name}_{self.problem_name}_trace.csv"
 
         try:
-            with open(filename, mode="w", newline="") as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=self.headers)
+            with open(filename, mode = "w", newline = "") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames = self.headers)
                 writer.writeheader()
                 writer.writerows(self.rows)
         except IOError as e:
@@ -174,14 +174,14 @@ def depthFirstSearch(problem):
 
         if problem.isGoalState(state):
             logger.log_step(
-                expanded_state=state,
-                parent=parent,
-                action=incoming_action,
-                successors=[],
-                frontier_before_obj=type('obj', (object,), {'list': frontier_before_copy}),
-                frontier_after_obj=frontier,
-                explored_set=explored,
-                g=len(actions), h=0, f=len(actions)
+                expanded_state = state,
+                parent = parent,
+                action = incoming_action,
+                successors = [],
+                frontier_before_obj = type("obj", (object,), {"list": frontier_before_copy}),
+                frontier_after_obj = frontier,
+                explored_set = explored,
+                g = len(actions), h = 0, f = len(actions)
             )
             logger.write_to_csv()
             return actions
@@ -195,14 +195,14 @@ def depthFirstSearch(problem):
                     frontier.push((succ_state, actions + [succ_action], state, succ_action))
 
             logger.log_step(
-                expanded_state=state,
-                parent=parent,
-                action=incoming_action,
-                successors=successors,
-                frontier_before_obj=type('obj', (object,), {'list': frontier_before_copy}),
-                frontier_after_obj=frontier,
-                explored_set=explored,
-                g=len(actions), h=0, f=len(actions)
+                expanded_state = state,
+                parent = parent,
+                action = incoming_action,
+                successors = successors,
+                frontier_before_obj = type("obj", (object,), {"list": frontier_before_copy}),
+                frontier_after_obj = frontier,
+                explored_set = explored,
+                g = len(actions), h = 0, f = len(actions)
             )
 
     logger.write_to_csv()
@@ -229,14 +229,14 @@ def breadthFirstSearch(problem):
 
         if problem.isGoalState(state):
             logger.log_step(
-                expanded_state=state,
-                parent=parent,
-                action=incoming_action,
-                successors=[],
-                frontier_before_obj=type('obj', (object,), {'list': frontier_before_copy}),
-                frontier_after_obj=frontier,
-                explored_set=explored,
-                g=len(actions), h=0, f=len(actions)
+                expanded_state = state,
+                parent = parent,
+                action = incoming_action,
+                successors = [],
+                frontier_before_obj = type("obj", (object,), {"list": frontier_before_copy}),
+                frontier_after_obj = frontier,
+                explored_set = explored,
+                g = len(actions), h = 0, f = len(actions)
             )
             logger.write_to_csv()
             return actions
@@ -248,14 +248,14 @@ def breadthFirstSearch(problem):
                 frontier.push((succ_state, actions + [succ_action], state, succ_action))
 
         logger.log_step(
-            expanded_state=state,
-            parent=parent,
-            action=incoming_action,
-            successors=successors,
-            frontier_before_obj=type('obj', (object,), {'list': frontier_before_copy}),
-            frontier_after_obj=frontier,
-            explored_set=explored,
-            g=len(actions), h=0, f=len(actions)
+            expanded_state = state,
+            parent = parent,
+            action = incoming_action,
+            successors = successors,
+            frontier_before_obj = type('obj', (object,), {'list': frontier_before_copy}),
+            frontier_after_obj = frontier,
+            explored_set = explored,
+            g = len(actions), h = 0, f = len(actions)
         )
 
     logger.write_to_csv()
@@ -280,14 +280,14 @@ def uniformCostSearch(problem):
 
         if problem.isGoalState(state):
             logger.log_step(
-                expanded_state=state,
-                parent=parent,
-                action=incoming_action,
-                successors=[],
-                frontier_before_obj=type('obj', (object,), {'heap': frontier_before_copy}),
-                frontier_after_obj=frontier,
-                explored_set=explored,
-                g=cost, h=0, f=cost
+                expanded_state = state,
+                parent = parent,
+                action = incoming_action,
+                successors = [],
+                frontier_before_obj = type("obj", (object,), {"heap": frontier_before_copy}),
+                frontier_after_obj = frontier,
+                explored_set = explored,
+                g = cost, h = 0, f = cost
             )
             logger.write_to_csv()
             return actions
@@ -308,14 +308,14 @@ def uniformCostSearch(problem):
                         )
 
             logger.log_step(
-                expanded_state=state,
-                parent=parent,
-                action=incoming_action,
-                successors=successors,
-                frontier_before_obj=type('obj', (object,), {'heap': frontier_before_copy}),
-                frontier_after_obj=frontier,
-                explored_set=explored,
-                g=cost, h=0, f=cost
+                expanded_state = state,
+                parent = parent,
+                action = incoming_action,
+                successors = successors,
+                frontier_before_obj = type("obj", (object,), {"heap": frontier_before_copy}),
+                frontier_after_obj = frontier,
+                explored_set = explored,
+                g = cost, h = 0, f = cost
             )
 
     logger.write_to_csv()
