@@ -328,14 +328,117 @@ def nullHeuristic(state, problem=None):
     """
     return 0
 
+def greedyBestFirstSearch(problem, heuristic=nullHeuristic):
+    """Search the node that has the lowest heuristic value first."""
+    logger = CSVTraceLogger("gbfs", problem)
+    frontier = util.PriorityQueue()
+    explored = set()
+    frontier_heuristics = {}
+
+    start_state = problem.getStartState()
+    start_h = heuristic(start_state, problem)
+    frontier.push((start_state, [], 0, None, None), start_h)  # priority = h(n) only
+    frontier_heuristics[start_state] = start_h
+
+    while not frontier.isEmpty():
+        frontier_before_copy = list(frontier.heap)
+        state, actions, cost, parent, incoming_action = frontier.pop()
+
+        if problem.isGoalState(state):
+            h = heuristic(state, problem)
+            logger.log_step(
+                expanded_state=state, parent=parent, action=incoming_action,
+                successors=[],
+                frontier_before_obj=type('obj', (object,), {'heap': frontier_before_copy}),
+                frontier_after_obj=frontier, explored_set=explored,
+                g=cost, h=h, f=h
+            )
+            logger.write_to_csv()
+            return actions
+
+        if state not in explored:
+            explored.add(state)
+            successors = problem.getSuccessors(state)
+            for succ_state, succ_action, step_cost in successors:
+                new_cost = cost + step_cost
+                if succ_state not in explored:
+                    h = heuristic(succ_state, problem)
+                    if succ_state not in frontier_heuristics or h < frontier_heuristics[succ_state]:
+                        frontier_heuristics[succ_state] = h
+                        frontier.push(
+                            (succ_state, actions + [succ_action], new_cost, state, succ_action),
+                            h  # priority = h(n) only, strictly greedy
+                        )
+
+            h_current = heuristic(state, problem)
+            logger.log_step(
+                expanded_state=state, parent=parent, action=incoming_action,
+                successors=successors,
+                frontier_before_obj=type('obj', (object,), {'heap': frontier_before_copy}),
+                frontier_after_obj=frontier, explored_set=explored,
+                g=cost, h=h_current, f=h_current
+            )
+
+    logger.write_to_csv()
+    return []
+
 def aStarSearch(problem: SearchProblem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    logger = CSVTraceLogger("astar", problem)
+    frontier = util.PriorityQueue()
+    explored = set()
+    frontier_costs = {}
 
+    start_state = problem.getStartState()
+    start_h = heuristic(start_state, problem)
+    frontier.push((start_state, [], 0, None, None), start_h)  # f = g(0) + h
+    frontier_costs[start_state] = 0
+
+    while not frontier.isEmpty():
+        frontier_before_copy = list(frontier.heap)
+        state, actions, cost, parent, incoming_action = frontier.pop()
+
+        if problem.isGoalState(state):
+            h = heuristic(state, problem)
+            logger.log_step(
+                expanded_state=state, parent=parent, action=incoming_action,
+                successors=[],
+                frontier_before_obj=type('obj', (object,), {'heap': frontier_before_copy}),
+                frontier_after_obj=frontier, explored_set=explored,
+                g=cost, h=h, f=cost + h
+            )
+            logger.write_to_csv()
+            return actions
+
+        if state not in explored:
+            explored.add(state)
+            successors = problem.getSuccessors(state)
+            for succ_state, succ_action, step_cost in successors:
+                new_cost = cost + step_cost
+                if succ_state not in explored:
+                    if succ_state not in frontier_costs or new_cost < frontier_costs[succ_state]:
+                        frontier_costs[succ_state] = new_cost
+                        h = heuristic(succ_state, problem)
+                        frontier.push(
+                            (succ_state, actions + [succ_action], new_cost, state, succ_action),
+                            new_cost + h
+                        )
+
+            h_current = heuristic(state, problem)
+            logger.log_step(
+                expanded_state=state, parent=parent, action=incoming_action,
+                successors=successors,
+                frontier_before_obj=type('obj', (object,), {'heap': frontier_before_copy}),
+                frontier_after_obj=frontier, explored_set=explored,
+                g=cost, h=h_current, f=cost + h_current
+            )
+
+    logger.write_to_csv()
+    return []
 
 # Abbreviations
 bfs = breadthFirstSearch
 dfs = depthFirstSearch
 astar = aStarSearch
 ucs = uniformCostSearch
+gbfs = greedyBestFirstSearch
